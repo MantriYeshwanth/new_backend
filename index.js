@@ -1,37 +1,115 @@
-const express = require('express');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import { MongoClient } from 'mongodb';
+
+// Set up MongoDB connection URI
+const uri = "mongodb+srv://yashmanthri19:Yeshrecipe1212@recipedb.xrkobjp.mongodb.net/RecipeDB?retryWrites=true&w=majority";
+const client = new MongoClient(uri);
+
 const app = express();
 const port = 3000;
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const { exec } = require('child_process');
 
-app.use(express.json());
-app.use(cors());
-app.use(bodyParser.json());
+// Enable CORS for the frontend origin (adjust if needed)
+app.use(cors({
+  origin: 'http://localhost:5173', // Frontend origin (adjust as per your setup)
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+}));
 
-app.post('/', (req, res) => {
-    const url = req.body.body;
+app.use(express.json()); // For parsing application/json
+app.use(bodyParser.json()); // Middleware for parsing json data in the body
 
-    if (!url) {
-        return res.status(400).send("No URL provided");
+// Route to handle product name and fetch reviews
+import axios from 'axios';  // Assuming you're using ES6 imports (if not, use require instead)
+
+app.post("/send-reviews", async (req, res) => {
+  const productName = req.body.productName;
+
+  if (!productName) {
+    return res.status(400).send("No product name provided");
+  }
+
+  try {
+    // Connect to the database
+    await client.connect();
+
+    // Access the database and the relevant collection
+    const database = client.db("Reviews"); // Replace with your DB name
+    const reviewsCollection = database.collection("ReviewBOT"); // Replace with your collection name
+
+    // Fetch reviews for the product
+    const reviews = await reviewsCollection
+      .find({ name: productName })
+      .toArray();
+
+    if (reviews.length === 0) {
+      return res.status(404).send("No reviews found for this product");
     }
 
-    // Execute the Python scraper script with the URL
-    exec(`python3 scraper.py "${url}"`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error: ${error.message}`);
-            return res.status(500).send("Error in scraping");
-        }
-        if (stderr) {
-            console.error(`stderr: ${stderr}`);
-            return res.status(500).send("Error in scraping");
-        }
+    // Concatenate all the reviews
+    const concatenatedReviews = reviews
+      .map(review => review.review)
+      .join(" "); // You can modify how the reviews are concatenated here
 
-        // Send the scraped reviews as JSON
-        res.send(stdout);
+    // console.log(concatenatedReviews);
+
+    // Send concatenated reviews to the Flask server at abc.com
+    const flaskUrl = 'https://6b0e-35-233-170-189.ngrok-free.app/process'; // Replace with your Flask server URL
+    const flaskResponse = await axios.post(flaskUrl, {
+      product_data: concatenatedReviews
     });
+
+    // Check the Flask response
+    if (flaskResponse.status === 200) {
+      console.log(flaskResponse.data.response_text)
+      res.json({
+        message: "Reviews processed successfully and sent to Flask",
+        flaskResponse: flaskResponse.data
+      });
+    } else {
+      res.status(flaskResponse.status).send("Error processing data with Flask server");
+    }
+
+  } catch (err) {
+    console.error("Error fetching reviews:", err);
+    res.status(500).send("Error fetching reviews");
+  } finally {
+    await client.close();
+  }
 });
 
+// Route to get all product information (unique product names)
+app.get("/prods", async (req, res) => {
+  try {
+    // Connect to the database
+    await client.connect();
+
+    // Access the database and the relevant collection
+    const database = client.db("Reviews"); // Replace with your DB name
+    const reviewsCollection = database.collection("ReviewBOT"); // Replace with your collection name
+
+    // Fetch all product information
+    const products = await reviewsCollection.find({}).toArray();
+
+    // Create an array of unique product names
+    const uniqueProductNames = [...new Set(products.map(product => product.name))];
+
+    // Check if the collection has any products
+    if (uniqueProductNames.length === 0) {
+      return res.status(404).send("No products found");
+    }
+    // Send the unique product names as JSON
+    res.json(uniqueProductNames);
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    res.status(500).send("Error fetching products");
+  } finally {
+    await client.close();
+  }
+});
+
+// Start the server
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
