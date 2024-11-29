@@ -6,7 +6,8 @@ import axios from 'axios';
 const api = new CrawlingAPI({ token: 'panVxST8Utk3w9mkHX2dxA' });
 
 // Add your cookies here (replace placeholders with actual values)
-const amazonCookies = 'x-acbin=Ws5Or0X6ElG9Xe0vMWl4M@XqRrJ2JRlMMCmAM4zNXx8HeNIJvv7LzW2igTy4EcLd; at-acbin=Atza|IwEBIDzqIDHmzvbJyHzgGeJg8JsG-mfGrdXWs5y9fVPFT96yrWWj_DlHKjimp7pvYaJ6n5RgaQ64CjecLR4URfmBXbOEsMuruUnDqA6C7utI-uWs6cNB4jITKaQ9zFjjLow39DyKFRpHzCoppTFw4etXm1PrQCQ_6Ft_9PfiiaBIXM6ctCczQS05stklQBQzcjj3cr5CbIVVg63kt3oj1qkWF_Z-OpaKgnTJjYUyFIxMU7lEZA'; 
+const amazonCookies =
+  'x-acbin=BZLMLd92UTHrsYCF5iEJ8ubUDVQNlbQhO6OQWY0YkXU878N1KWIFlQAGM4kJNSYw; at-acbin=Atza|IwEBIPwhAhvMbocfl23Y74Tu1859c25znyqsltJdqJshBH0xIYX6boASpIXoyPlf4TGMZnLVKoCnsnmaQOooOj_V5kVMp5ES1XLMjocSLQq0qyFxoA-TRDImD5Y6ZiZLT12Y6lTSIsX89HUbdtWyRISORagh9zQ2PQruhT3rKTBI0x2Fo4MfAF9MJPs_UrC7inXKldwo0TTFuve-bEToyMCR5OuJed6ghFNpXKIiSORddczzHQ';
 
 // Function to extract ASIN from any Amazon product URL
 function extractASIN(url) {
@@ -16,7 +17,7 @@ function extractASIN(url) {
 
 // Function to construct reviews URL using the ASIN
 function constructReviewsURL(asin, pageNumber = 1) {
-  return `https://www.amazon.in/product-reviews/${asin}/?reviewerType=all_reviews&pageNumber=${pageNumber};`
+  return `https://www.amazon.in/product-reviews/${asin}/?reviewerType=all_reviews&pageNumber=${pageNumber}`;
 }
 
 // Fetch reviews for a single page
@@ -24,8 +25,8 @@ async function fetchPage(url) {
   try {
     const response = await api.get(url, {
       scraper: 'amazon-product-reviews',
-      ajax_wait: 2000,
-      page_wait: 2000,
+      ajax_wait: 2000, // Reduce wait time
+      page_wait: 2000, // Reduce wait time
       cookies: amazonCookies,
     });
 
@@ -40,19 +41,14 @@ async function fetchPage(url) {
         reviewText: review.reviewText,
       }));
     } else {
-      // Add full logging to see what went wrong
-      console.error(`API request failed with status: ${response.statusCode}`);
-      console.error('Response body:', response.json);
-      console.error('Response headers:', response.headers);
       throw new Error(`API request failed with status: ${response.statusCode}`);
     }
   } catch (error) {
     console.error(`Failed to fetch page: ${url}`);
-    console.error('Full error object:', error);
+    console.error(`Error details: ${error.message}`);
     return [];
   }
 }
-
 
 // Fetch reviews in parallel
 async function fetchReviews(asin, targetCount = 100) {
@@ -82,7 +78,7 @@ async function fetchReviews(asin, targetCount = 100) {
 }
 
 // Main function to fetch reviews
-export async function fetchAllReviews(productURL, targetCount = 100) {
+async function fetchAllReviews(productURL, targetCount = 100) {
   try {
     const asin = extractASIN(productURL);
     if (!asin) {
@@ -93,13 +89,12 @@ export async function fetchAllReviews(productURL, targetCount = 100) {
     const reviews = await fetchReviews(asin, targetCount);
 
     console.log('Total Reviews Fetched:', reviews.length);
-
-    // Optionally, you can save reviews to a file, but it's not needed for your use case
-    // fs.writeFileSync('amazon_reviews.json', JSON.stringify({ reviews }, null, 2));
-
-    return reviews; // Return reviews directly back to index.js
+    fs.writeFileSync('amazon_reviews5.json', JSON.stringify({ reviews }, null, 2));
   } catch (error) {
     console.error(`Failed to fetch reviews: ${error.message}`);
-    return []; // Return empty array if error occurs
   }
 }
+
+// Replace with any Amazon product URL
+const amazonProductURL = 'https://www.amazon.in/dp/B08R41SH7Q?pd_rd_i=B08R41SH7Q&pf_rd_p=aa14fa00-bc47-4b9c-afe8-e5f5a8aecc2e&pf_rd_r=HMRB658JH5XZNSSZ38QD&pd_rd_wg=eNRJM&pd_rd_w=UA27M&pd_rd_r=c983c2de-7c88-445d-8221-34936da51a52&th=1';
+fetchAllReviews(amazonProductURL, 100); 

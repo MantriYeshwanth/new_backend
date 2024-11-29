@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { MongoClient } from 'mongodb';
+import { fetchAllReviews } from './Crawler.js'; 
+import axios from 'axios';  // Assuming you're using ES6 imports
 
 // Set up MongoDB connection URI
 const uri = "mongodb+srv://yashmanthri19:Yeshrecipe1212@recipedb.xrkobjp.mongodb.net/RecipeDB?retryWrites=true&w=majority";
@@ -9,7 +11,7 @@ const client = new MongoClient(uri);
 
 const app = express();
 const port = 3000;
-
+app.use(bodyParser.json());
 // Enable CORS for the frontend origin (adjust if needed)
 app.use(cors({
   origin: 'http://localhost:5173', // Frontend origin (adjust as per your setup)
@@ -20,9 +22,10 @@ app.use(cors({
 app.use(express.json()); // For parsing application/json
 app.use(bodyParser.json()); // Middleware for parsing json data in the body
 
-// Route to handle product name and fetch reviews
-import axios from 'axios';  // Assuming you're using ES6 imports (if not, use require instead)
+// Global Flask URL
+const flaskUrl = 'https://2bdf-35-231-207-118.ngrok-free.app/process'; // Replace with your Flask server URL
 
+// Route to handle product name and fetch reviews
 app.post("/send-reviews", async (req, res) => {
   const productName = req.body.productName;
 
@@ -52,10 +55,7 @@ app.post("/send-reviews", async (req, res) => {
       .map(review => review.review)
       .join(" "); // You can modify how the reviews are concatenated here
 
-    // console.log(concatenatedReviews);
-
-    // Send concatenated reviews to the Flask server at abc.com
-    const flaskUrl = 'https://6b0e-35-233-170-189.ngrok-free.app/process'; // Replace with your Flask server URL
+    // Send concatenated reviews to the Flask server at flaskUrl
     const flaskResponse = await axios.post(flaskUrl, {
       product_data: concatenatedReviews
     });
@@ -99,6 +99,7 @@ app.get("/prods", async (req, res) => {
     if (uniqueProductNames.length === 0) {
       return res.status(404).send("No products found");
     }
+
     // Send the unique product names as JSON
     res.json(uniqueProductNames);
   } catch (err) {
@@ -106,6 +107,44 @@ app.get("/prods", async (req, res) => {
     res.status(500).send("Error fetching products");
   } finally {
     await client.close();
+  }
+});
+
+// Route to search and get reviews for a product (from the scraper)
+app.post("/search", async (req, res) => {
+  try {
+    const { productUrl } = req.body; // Get the product URL from the request body
+
+    if (!productUrl) {
+      return res.status(400).json({ error: "Product URL is required." });
+    }
+
+    // Call the scraper function from crawler.js to get the reviews
+    const reviews = await fetchAllReviews(productUrl, 100); // Scrape 100 reviews or any other number you want
+    console.log(reviews);
+
+    // Concatenate all review texts into a single string
+    const concatenatedReviews = reviews.map(review => review.reviewText).join(" ");
+
+    // Send the concatenated reviews to the Flask server at flaskUrl
+    const flaskResponse = await axios.post(flaskUrl, {
+      product_data: concatenatedReviews
+    });
+
+    // Check the Flask response
+    if (flaskResponse.status === 200) {
+      console.log(flaskResponse.data.response_text);
+      res.json({
+        message: "Reviews processed successfully and sent to Flask",
+        flaskResponse: flaskResponse.data
+      });
+    } else {
+      res.status(flaskResponse.status).send("Error processing data with Flask server");
+    }
+
+  } catch (error) {
+    console.error('Error in /search route:', error);
+    res.status(500).json({ error: "Failed to fetch reviews." });
   }
 });
 
