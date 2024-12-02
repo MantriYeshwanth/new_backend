@@ -23,7 +23,7 @@ app.use(express.json()); // For parsing application/json
 app.use(bodyParser.json()); // Middleware for parsing json data in the body
 
 // Global Flask URL
-const flaskUrl = 'https://2bdf-35-231-207-118.ngrok-free.app/process'; // Replace with your Flask server URL
+const flaskUrl = 'https://708b-34-75-36-186.ngrok-free.app/process'; // Replace with your Flask server URL
 
 // Route to handle product name and fetch reviews
 app.post("/send-reviews", async (req, res) => {
