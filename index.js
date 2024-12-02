@@ -30,7 +30,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/login", loginRoutes);
 
 // Global Flask URL
-const flaskUrl = 'https://2bdf-35-231-207-118.ngrok-free.app/process'; // Replace with your Flask server URL
+const flaskUrl = 'https://708b-34-75-36-186.ngrok-free.app/process'; // Replace with your Flask server URL
 
 // Route to handle product name and fetch reviews
 app.post("/send-reviews", async (req, res) => {
