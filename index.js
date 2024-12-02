@@ -4,6 +4,9 @@ import bodyParser from 'body-parser';
 import { MongoClient } from 'mongodb';
 import { fetchAllReviews } from './Crawler.js'; 
 import axios from 'axios';  // Assuming you're using ES6 imports
+import contactRoutes from "./contactRoutes.js";
+import authRoutes from "./authRoutes.js";
+import loginRoutes from "./login.js";
 
 // Set up MongoDB connection URI
 const uri = "mongodb+srv://yashmanthri19:Yeshrecipe1212@recipedb.xrkobjp.mongodb.net/RecipeDB?retryWrites=true&w=majority";
@@ -21,6 +24,10 @@ app.use(cors({
 
 app.use(express.json()); // For parsing application/json
 app.use(bodyParser.json()); // Middleware for parsing json data in the body
+
+app.use("/api/contact", contactRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/login", loginRoutes);
 
 // Global Flask URL
 const flaskUrl = 'https://2bdf-35-231-207-118.ngrok-free.app/process'; // Replace with your Flask server URL
