@@ -1,12 +1,19 @@
 import express from "express";
-import { MongoClient } from "mongodb";
-
-// MongoDB connection URI
-const uri =
-  "mongodb+srv://yashmanthri19:Yeshrecipe1212@recipedb.xrkobjp.mongodb.net/RecipeDB?retryWrites=true&w=majority";
-const client = new MongoClient(uri);
+import connectDB from "./db.js";
+import mongoose from "mongoose";
 
 const router = express.Router();
+
+// Define the schema for the contact collection
+const contactSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  message: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+});
+
+// Create the Contact model
+const Contact = mongoose.model("Contact", contactSchema);
 
 // Route to handle contact form submission
 router.post("/", async (req, res) => {
@@ -17,18 +24,18 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    // Connect to the MongoDB database
-    await client.connect();
-    const database = client.db("Reviews"); // Use a new database or existing one
-    const contactCollection = database.collection("contact_RB");
+    // Ensure the database connection is established
+    await connectDB();
 
-    // Insert the contact details into the collection
-    const result = await contactCollection.insertOne({
+    // Create a new contact document
+    const newContact = new Contact({
       name,
       email,
       message,
-      timestamp: new Date(),
     });
+
+    // Save the contact document to the database
+    const result = await newContact.save();
 
     res
       .status(200)
@@ -38,8 +45,6 @@ router.post("/", async (req, res) => {
     res.status(500).json({
       error: "Failed to save contact details. Please try again later.",
     });
-  } finally {
-    await client.close();
   }
 });
 
